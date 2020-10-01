@@ -54,15 +54,28 @@ func main() {
 
 	var buildSlugs []string
 	environments := createEnvs(cfg.Environments)
-	for _, wf := range strings.Split(strings.TrimSpace(cfg.Workflows), "\n") {
-		wf = strings.TrimSpace(wf)
-		startedBuild, err := app.StartBuild(wf, build.OriginalBuildParams, cfg.BuildNumber, environments)
+	for _, buildCommand := range regex() {
+		env := bitrise.Environment{
+			MappedTo: "GRADLE_BUILD",
+			Value:    buildCommand,
+		}
+		environments = append(environments, env)
+		startedBuild, err := app.StartBuild("child-clone", build.OriginalBuildParams, cfg.BuildNumber, environments)
 		if err != nil {
 			failf("Failed to start build, error: %s", err)
 		}
 		buildSlugs = append(buildSlugs, startedBuild.BuildSlug)
 		log.Printf("- %s started (https://app.bitrise.io/build/%s)", startedBuild.TriggeredWorkflow, startedBuild.BuildSlug)
 	}
+	//for _, wf := range strings.Split(strings.TrimSpace(cfg.Workflows), "\n") {
+	//	wf = strings.TrimSpace(wf)
+	//	startedBuild, err := app.StartBuild(wf, build.OriginalBuildParams, cfg.BuildNumber, environments)
+	//	if err != nil {
+	//		failf("Failed to start build, error: %s", err)
+	//	}
+	//	buildSlugs = append(buildSlugs, startedBuild.BuildSlug)
+	//	log.Printf("- %s started (https://app.bitrise.io/build/%s)", startedBuild.TriggeredWorkflow, startedBuild.BuildSlug)
+	//}
 
 	if err := tools.ExportEnvironmentWithEnvman(envBuildSlugs, strings.Join(buildSlugs, "\n")); err != nil {
 		failf("Failed to export environment variable, error: %s", err)

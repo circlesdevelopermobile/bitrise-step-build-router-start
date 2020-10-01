@@ -29,6 +29,14 @@
   revision = "e212188d99b41373b4ff8b69e7b1f677bc427bde"
 
 [[projects]]
+  digest = "1:83e46b24d8e71d0483086cd49e464a8b48c93224221e16cf5be2d46ad863fa53"
+  name = "github.com/bitrise-steplib/bitrise-step-build-router-start"
+  packages = ["bitrise"]
+  pruneopts = "UT"
+  revision = "63a29bf46ca6346a88030bd5208163e241cff8f8"
+  version = "0.14.0"
+
+[[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
@@ -129,6 +137,7 @@
     "github.com/bitrise-io/go-steputils/stepconf",
     "github.com/bitrise-io/go-steputils/tools",
     "github.com/bitrise-io/go-utils/log",
+    "github.com/bitrise-steplib/bitrise-step-build-router-start/bitrise",
     "github.com/hashicorp/go-retryablehttp",
     "github.com/stretchr/testify/require",
   ]
