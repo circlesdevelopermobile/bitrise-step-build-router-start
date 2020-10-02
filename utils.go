@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"regexp"
 	"strconv"
@@ -28,12 +29,31 @@ func (bt BuildType) Name() string {
 	}
 }
 
-const NONE = "none"
+type BuildParams struct {
+	GradleBuildTask  string `env:"GRADLE_BUILD"`
+	Alpha2Code       string `env:"ALPHA_2_CODE"` // Slack, Browserstack
+	BuildRegion      string `env:"SLACK_REGION"` // Slack
+	GServicesXMLPath string `env:"GMS_XML"`      // QA
+	PackageName      string `env:"PKG_NAME"`     // Prod
+}
 
+const NONE = "none"
+const GSERVICES_XML_FILE_PATH = "accmng/build/generated/res/google-services/%s/%s/values/values.xml"
+
+// TODO: read from XML
 var REGION_MAP = map[string]string{
 	"SG": "singapore",
 	"TW": "taiwan",
 	"AU": "australia",
+	"ID": "indonesia",
+}
+
+func reverseMap(m *map[string]string) map[string]string {
+	tmpMap := make(map[string]string)
+	for k, v := range *m {
+		tmpMap[v] = k
+	}
+	return tmpMap
 }
 
 func toBool(envvar string) bool {
@@ -64,7 +84,18 @@ func findStringOrDefault(re *regexp.Regexp, str string, def string) string {
 	return def
 }
 
-func regex() []string {
+func generatePackageName(region string, a2code string, buildType *BuildType) string {
+	basePkg := "com.circles.selfcare"
+	if region != "singapore" {
+		basePkg = basePkg + "." + strings.ToLower(a2code)
+	}
+	if *buildType != Release {
+		basePkg = basePkg + "." + buildType.Name()
+	}
+	return basePkg
+}
+
+func generateBuildParams() []BuildParams {
 	var token string
 
 	buildType := Debug
@@ -82,8 +113,6 @@ func regex() []string {
 		token = "1.2.3-SG-RC1" // Sample only
 	}
 
-	println(token)
-
 	versionExp := regexp.MustCompile(`\d+\.\d+\.\d+`)
 	rcExp := regexp.MustCompile(`(?i)RC\d+`)
 	regionExp := regexp.MustCompile(`(?i)au|tw|sg|id`)
@@ -91,7 +120,7 @@ func regex() []string {
 
 	version := findStringOrDefault(versionExp, token, NONE)
 	rc := findStringOrDefault(rcExp, token, NONE)
-	region := findStringOrDefault(regionExp, token, "")
+	regionA2 := strings.ToUpper(findStringOrDefault(regionExp, token, ""))
 	vendorSvc := strings.ToLower(findStringOrDefault(vendorSvcExp, token, NONE))
 
 	if vendorSvc == NONE {
@@ -107,9 +136,9 @@ func regex() []string {
 		buildCmd = "bundle"
 	}
 	var buildRegions []string
-	if toBool("PR") || region != "" {
+	if toBool("PR") || regionA2 != "" {
 		var buildRegion string
-		mapping, exists := REGION_MAP[region]
+		mapping, exists := REGION_MAP[regionA2]
 		if exists {
 			buildRegion = mapping
 		} else {
@@ -122,10 +151,20 @@ func regex() []string {
 		}
 	}
 
-	var buildCommands []string
+	var buildParams []BuildParams
+	var invMap = reverseMap(&REGION_MAP)
 	for _, buildRegion := range buildRegions {
-		buildCommands = append(buildCommands, snakify(buildCmd, buildRegion, vendorSvc, buildType.Name()))
+		flavor := snakify(buildRegion, "gms")
+		a2Code := invMap[buildRegion]
+		buildParam := BuildParams{
+			GradleBuildTask:  snakify(buildCmd, buildRegion, vendorSvc, buildType.Name()),
+			Alpha2Code:       invMap[buildRegion],
+			BuildRegion:      strings.Title(buildRegion),
+			GServicesXMLPath: fmt.Sprintf(GSERVICES_XML_FILE_PATH, flavor, buildType.Name()),
+			PackageName:      generatePackageName(buildRegion, a2Code, &buildType),
+		}
+		buildParams = append(buildParams, buildParam)
 	}
 
-	return buildCommands
+	return buildParams
 }

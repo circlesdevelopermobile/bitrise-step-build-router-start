@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"reflect"
 	"strings"
 
 	"github.com/bitrise-io/go-steputils/stepconf"
@@ -54,13 +55,9 @@ func main() {
 
 	var buildSlugs []string
 	environments := createEnvs(cfg.Environments)
-	for _, buildCommand := range regex() {
-		env := bitrise.Environment{
-			MappedTo: "GRADLE_BUILD",
-			Value:    buildCommand,
-		}
-		environments = append(environments, env)
-		startedBuild, err := app.StartBuild("child-clone", build.OriginalBuildParams, cfg.BuildNumber, environments)
+	for _, buildParam := range generateBuildParams() {
+		newEnvs := writeBuildParamsToEnvs(&buildParam, &environments)
+		startedBuild, err := app.StartBuild(cfg.Workflows, build.OriginalBuildParams, cfg.BuildNumber, newEnvs)
 		if err != nil {
 			failf("Failed to start build, error: %s", err)
 		}
@@ -160,4 +157,21 @@ func createEnvs(environmentKeys string) []bitrise.Environment {
 		environments = append(environments, env)
 	}
 	return environments
+}
+
+func writeBuildParamsToEnvs(buildParams *BuildParams, src *[]bitrise.Environment) []bitrise.Environment {
+	var newEnvs []bitrise.Environment
+	copy(newEnvs, *src)
+	rType := reflect.TypeOf(*buildParams)
+	rValue := reflect.ValueOf(*buildParams)
+	for i := 0; i < rType.NumField(); i++ {
+		field := rType.Field(i)
+		fieldValue := rValue.Field(i)
+		env := bitrise.Environment{
+			MappedTo: field.Tag.Get("env"),
+			Value:    fmt.Sprintf("%v", fieldValue.Interface()),
+		}
+		newEnvs = append(newEnvs, env)
+	}
+	return newEnvs
 }
