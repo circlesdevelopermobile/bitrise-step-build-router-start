@@ -56,6 +56,7 @@ func main() {
 	var buildSlugs []string
 	environments := createEnvs(cfg.Environments)
 	for _, buildParam := range generateBuildParams() {
+		log.Infof(fmt.Sprintf("BuildParam: %v", buildParam))
 		newEnvs := writeBuildParamsToEnvs(&buildParam, &environments)
 		startedBuild, err := app.StartBuild(cfg.Workflows, build.OriginalBuildParams, cfg.BuildNumber, newEnvs)
 		if err != nil {
