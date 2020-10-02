@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/bitrise-io/go-utils/log"
 	"os"
 	"regexp"
 	"strconv"
@@ -30,15 +31,22 @@ func (bt BuildType) Name() string {
 }
 
 type BuildParams struct {
-	GradleBuildTask  string `env:"GRADLE_BUILD"`
-	Alpha2Code       string `env:"ALPHA_2_CODE"` // Slack, Browserstack
-	BuildRegion      string `env:"SLACK_REGION"` // Slack
-	GServicesXMLPath string `env:"GMS_XML"`      // QA
-	PackageName      string `env:"PKG_NAME"`     // Prod
+	GradleBuildTask    string    `env:"GRADLE_BUILD" json:"build_task"`
+	Alpha2Code         string    `env:"ALPHA_2_CODE" json:"-"`      // Slack, Browserstack
+	SlackFlag          string    `env:"SLACK_FLAG" json:"-"`        // Slack
+	BuildRegion        string    `env:"SLACK_REGION" json:"-"`      // Slack
+	GServicesXMLPath   string    `env:"GMS_XML" json:"-"`           // QA
+	PackageName        string    `env:"PKG_NAME" json:"pkg"`        // Prod
+	BrowserstackSuffix string    `env:"BS_SUFFIX" json:"bs_suffix"` // Browserstack
+	NewTag             string    `env:"-" json:"new_tag"`           // Internal
+	TgtBuildType       BuildType `env:"-" json:"build_type"`        // Internal
 }
 
 const NONE = "none"
 const GSERVICES_XML_FILE_PATH = "accmng/build/generated/res/google-services/%s/%s/values/values.xml"
+
+// Check the link below if the build fails
+// https://developers.google.com/android/guides/google-services-plugin#processing_the_json_file
 
 func reverseMap(m *map[string]string) map[string]string {
 	tmpMap := make(map[string]string)
@@ -87,6 +95,19 @@ func generatePackageName(region string, a2code string, buildType *BuildType) str
 	return basePkg
 }
 
+func generateNewTag(version string, a2 string, rc string, buildType BuildType) string {
+	newTag := ""
+	switch buildType {
+	case Qa:
+		newTag = fmt.Sprintf("%s-%s-%s", version, a2, rc)
+		break
+	case Release:
+		newTag = fmt.Sprintf("%s-%s", version, a2)
+		break
+	}
+	return newTag
+}
+
 func generateBuildParams(regionMap map[string]string) []BuildParams {
 	var token string
 
@@ -102,7 +123,7 @@ func generateBuildParams(regionMap map[string]string) []BuildParams {
 			token = branch
 		}
 	} else {
-		token = "1.2.3-SG-RC1" // Sample only
+		os.Exit(1)
 	}
 
 	versionExp := regexp.MustCompile(`\d+\.\d+\.\d+`)
@@ -112,14 +133,18 @@ func generateBuildParams(regionMap map[string]string) []BuildParams {
 
 	version := findStringOrDefault(versionExp, token, NONE)
 	rc := findStringOrDefault(rcExp, token, NONE)
-	regionA2 := strings.ToUpper(findStringOrDefault(regionExp, token, ""))
+	regionA2 := findStringOrDefault(regionExp, token, NONE)
 	vendorSvc := strings.ToLower(findStringOrDefault(vendorSvcExp, token, NONE))
+
+	envLogFmt := "Environment information:\nversion=\"%s\"\nrc=\"%s\"\nregionA2=\"%s\"\nvendorSvc=\"%s\""
+	// println(fmt.Sprintf(envLogFmt, version, rc, regionA2, vendorSvc))
+	log.Infof(fmt.Sprintf(envLogFmt, version, rc, regionA2, vendorSvc))
 
 	if vendorSvc == NONE {
 		vendorSvc = "gms"
 	}
 
-	if version != NONE && rc != NONE {
+	if version != NONE && rc == NONE {
 		buildType = Release
 	}
 
@@ -127,34 +152,45 @@ func generateBuildParams(regionMap map[string]string) []BuildParams {
 	if buildType == Release && vendorSvc == "gms" {
 		buildCmd = "bundle"
 	}
+
 	var buildRegions []string
-	if toBool("PR") || regionA2 != "" {
-		var buildRegion string
-		mapping, exists := regionMap[regionA2]
-		if exists {
-			buildRegion = mapping
-		} else {
-			buildRegion = "singapore"
-		}
-		buildRegions = append(buildRegions, buildRegion)
+	var newTagMapping = make(map[string]string)
+	mapping, exists := regionMap[strings.ToUpper(regionA2)]
+	if exists {
+		buildRegions = append(buildRegions, mapping)
+	} else if toBool("PR") {
+		// fallback to SG builds on PRs
+		buildRegions = append(buildRegions, "singapore")
 	} else {
-		for _, v := range regionMap {
-			buildRegions = append(buildRegions, v)
+		for a2, region := range regionMap {
+			newTagMapping[region] = generateNewTag(version, a2, rc, buildType)
+			buildRegions = append(buildRegions, region)
 		}
 	}
 
 	var buildParams []BuildParams
-	var invMap = reverseMap(&regionMap)
+	var regionToA2 = reverseMap(&regionMap)
 	for _, buildRegion := range buildRegions {
 		flavor := snakify(buildRegion, "gms")
-		a2Code := invMap[buildRegion]
-		buildParam := BuildParams{
-			GradleBuildTask:  snakify(buildCmd, buildRegion, vendorSvc, buildType.Name()),
-			Alpha2Code:       invMap[buildRegion],
-			BuildRegion:      strings.Title(buildRegion),
-			GServicesXMLPath: fmt.Sprintf(GSERVICES_XML_FILE_PATH, flavor, buildType.Name()),
-			PackageName:      generatePackageName(buildRegion, a2Code, &buildType),
+		a2Code := regionToA2[buildRegion]
+		bsSuffix := "QA"
+
+		if buildType == Release {
+			bsSuffix = "PROD"
 		}
+
+		buildParam := BuildParams{
+			GradleBuildTask:    snakify(buildCmd, buildRegion, vendorSvc, buildType.Name()),
+			Alpha2Code:         a2Code,
+			SlackFlag:          fmt.Sprintf(":flag-%s:", strings.ToLower(a2Code)),
+			BuildRegion:        strings.Title(buildRegion),
+			GServicesXMLPath:   fmt.Sprintf(GSERVICES_XML_FILE_PATH, flavor, buildType.Name()),
+			PackageName:        generatePackageName(buildRegion, a2Code, &buildType),
+			BrowserstackSuffix: bsSuffix,
+			NewTag:             newTagMapping[buildRegion],
+			TgtBuildType:       buildType,
+		}
+
 		buildParams = append(buildParams, buildParam)
 	}
 

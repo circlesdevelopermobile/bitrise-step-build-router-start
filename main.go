@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"reflect"
@@ -76,9 +77,18 @@ func main() {
 		log.Infof(fmt.Sprintf("BuildParam: %v", buildParam))
 		if i == 0 {
 			writeBuildParamsToEnvs(&buildParam, nil) // write to envman directly!
+			// rewrite tag if necessary
+			if buildParam.NewTag != "" {
+				_ = os.Setenv("BITRISE_GIT_TAG", buildParam.NewTag)
+			}
 		} else {
 			newEnvs := writeBuildParamsToEnvs(&buildParam, &environments)
-			startedBuild, err := app.StartBuild(cfg.DebugWorkflow, build.OriginalBuildParams, cfg.BuildNumber, newEnvs)
+			startedBuild, err := app.StartBuild(
+				getCorrectWorkflow(cfg, buildParam.TgtBuildType),
+				tryInjectNewTagToParams(build.OriginalBuildParams, buildParam.NewTag, build.BuildNumber),
+				cfg.BuildNumber,
+				newEnvs,
+			)
 			if err != nil {
 				failf("Failed to start build, error: %s", err)
 			}
@@ -131,12 +141,38 @@ func writeBuildParamsToEnvs(buildParams *BuildParams, src *[]bitrise.Environment
 		for i := 0; i < rType.NumField(); i++ {
 			field := rType.Field(i)
 			fieldValue := rValue.Field(i)
-			env := bitrise.Environment{
-				MappedTo: field.Tag.Get("env"),
-				Value:    fmt.Sprintf("%v", fieldValue.Interface()),
+			if key := field.Tag.Get("env"); key != "-" {
+				env := bitrise.Environment{
+					MappedTo: key,
+					Value:    fmt.Sprintf("%v", fieldValue.Interface()),
+				}
+				newEnvs = append(newEnvs, env)
 			}
-			newEnvs = append(newEnvs, env)
 		}
 	}
 	return newEnvs
+}
+
+func getCorrectWorkflow(cfg Config, buildType BuildType) string {
+	switch buildType {
+	case Release:
+		return cfg.ReleaseWorkflow
+	case Qa:
+		return cfg.QaWorkflow
+	default:
+		return cfg.DebugWorkflow
+	}
+}
+
+func tryInjectNewTagToParams(original json.RawMessage, tag string, buildNo int64) json.RawMessage {
+	var params map[string]interface{}
+	if err := json.Unmarshal(original, &params); err != nil {
+		failf("Forbidden technique doesn't work!")
+	}
+	if tag != "" {
+		params["tag"] = tag
+	}
+	params["triggered_by"] = fmt.Sprintf("Build #%d", buildNo)
+	result, _ := json.Marshal(params)
+	return result
 }
