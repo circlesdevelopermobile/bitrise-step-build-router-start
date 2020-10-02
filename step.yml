@@ -1,6 +1,6 @@
-title: "Bitrise Start Build (Modified)"
-summary: "Starts the given workflows in the same app"
-description: "Starts the given workflows in the same app"
+title: "Android Build Router"
+summary: "Routes builds to specific workflows"
+description: "Routes builds to specific workflows"
 website: https://github.com/bitrise-steplib/bitrise-step-build-router-start
 source_code_url: https://github.com/bitrise-steplib/bitrise-step-build-router-start
 support_url: https://github.com/bitrise-steplib/bitrise-step-build-router-start/issues
@@ -21,18 +21,42 @@ inputs:
       title: Bitrise Access Token
       summary: Your access token
       description: |
-          Your access token
-          
-          To acquire a `Personal Access Token` for your user, sign in with that user on [bitrise.io](https://bitrise.io),  
-          go to your `Account Settings` page, and select the [Security tab](https://www.bitrise.io/me/profile#/security) on the left side.
+        Your access token
+
+        To acquire a `Personal Access Token` for your user, sign in with that user on [bitrise.io](https://bitrise.io),
+        go to your `Account Settings` page, and select the [Security tab](https://www.bitrise.io/me/profile#/security) on the left side.
       is_required: true
       is_expand: true
       is_sensitive: true
-  - workflows:
+  - region_mapping:
     opts:
-      title: Workflows
-      summary: The workflow(s) to start. One workflow per line.
-      description: The workflow(s) to start. One workflow per line.
+      title: Region Mapping
+      summary: A mapping of Alpha-2 Codes to Country that this script will support
+      description: |
+        A mapping of Alpha-2 Codes to Country that this script will support.
+
+        **Example** Seperate the keys with new line. E.g:
+        ```SG=Singapore
+        AU=Australia
+        ID=Indonesia```
+      is_required: true
+  - debug_workflow:
+    opts:
+      title: Debug workflow
+      summary: The workflow used to assemble debug builds
+      description: The workflow used to assemble debug builds.
+      is_required: true
+  - qa_workflow:
+    opts:
+      title: QA workflow
+      summary: The workflow used to assemble qa builds
+      description: The workflow used to assemble qa builds.
+      is_required: true
+  - release_workflow:
+    opts:
+      title: Release workflow (GMS)
+      summary: The workflow used to assemble release builds
+      description: The workflow used to assemble release builds.
       is_required: true
   - environment_key_list:
     opts:
@@ -41,11 +65,11 @@ inputs:
       description: |-
         The keys of the envs which will be shared with the triggered workflows
 
-        
+
         **FORMAT** Seperate the keys with new line. E.g: 
-        `ENV_1
+        ```ENV_1
         ENV_2
-        ENV_3`
+        ENV_3```
       is_expand: false
       is_required: false
   - wait_for_builds: "false"
@@ -62,7 +86,7 @@ inputs:
       title: Path to save the Artifacts in (leave empty to not save artifacts)
       summary: This is where the artifacts will be saved to if wait_for_builds == true
       description: |
-          This is where the artifacts will be saved to so you can access them in the workflow
+        This is where the artifacts will be saved to so you can access them in the workflow
       is_required: false
       is_sensitive: false
   - abort_on_fail: "no"

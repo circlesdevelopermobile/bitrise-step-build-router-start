@@ -40,14 +40,6 @@ type BuildParams struct {
 const NONE = "none"
 const GSERVICES_XML_FILE_PATH = "accmng/build/generated/res/google-services/%s/%s/values/values.xml"
 
-// TODO: read from XML
-var REGION_MAP = map[string]string{
-	"SG": "singapore",
-	"TW": "taiwan",
-	"AU": "australia",
-	"ID": "indonesia",
-}
-
 func reverseMap(m *map[string]string) map[string]string {
 	tmpMap := make(map[string]string)
 	for k, v := range *m {
@@ -95,7 +87,7 @@ func generatePackageName(region string, a2code string, buildType *BuildType) str
 	return basePkg
 }
 
-func generateBuildParams() []BuildParams {
+func generateBuildParams(regionMap map[string]string) []BuildParams {
 	var token string
 
 	buildType := Debug
@@ -138,7 +130,7 @@ func generateBuildParams() []BuildParams {
 	var buildRegions []string
 	if toBool("PR") || regionA2 != "" {
 		var buildRegion string
-		mapping, exists := REGION_MAP[regionA2]
+		mapping, exists := regionMap[regionA2]
 		if exists {
 			buildRegion = mapping
 		} else {
@@ -146,13 +138,13 @@ func generateBuildParams() []BuildParams {
 		}
 		buildRegions = append(buildRegions, buildRegion)
 	} else {
-		for _, v := range REGION_MAP {
+		for _, v := range regionMap {
 			buildRegions = append(buildRegions, v)
 		}
 	}
 
 	var buildParams []BuildParams
-	var invMap = reverseMap(&REGION_MAP)
+	var invMap = reverseMap(&regionMap)
 	for _, buildRegion := range buildRegions {
 		flavor := snakify(buildRegion, "gms")
 		a2Code := invMap[buildRegion]

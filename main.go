@@ -20,10 +20,13 @@ type Config struct {
 	BuildSlug              string          `env:"BITRISE_BUILD_SLUG,required"`
 	BuildNumber            string          `env:"BITRISE_BUILD_NUMBER,required"`
 	AccessToken            stepconf.Secret `env:"access_token,required"`
+	RegionMap              string          `env:"region_mapping,required"`
 	WaitForBuilds          string          `env:"wait_for_builds"`
 	BuildArtifactsSavePath string          `env:"build_artifacts_save_path"`
 	AbortBuildsOnFail      string          `env:"abort_on_fail"`
-	Workflows              string          `env:"workflows,required"`
+	DebugWorkflow          string          `env:"debug_workflow,required"`
+	QaWorkflow             string          `env:"qa_workflow,required"`
+	ReleaseWorkflow        string          `env:"release_workflow,required"`
 	Environments           string          `env:"environment_key_list"`
 	IsVerboseLog           bool            `env:"verbose,required"`
 }
@@ -53,27 +56,26 @@ func main() {
 
 	log.Infof("Starting builds:")
 
+	regionMap := make(map[string]string)
+	for _, line := range strings.Split(cfg.RegionMap, "\n") {
+		pair := strings.Split(line, "=")
+		key := pair[0]
+		value := pair[1]
+		regionMap[key] = value
+	}
+
 	var buildSlugs []string
 	environments := createEnvs(cfg.Environments)
-	for _, buildParam := range generateBuildParams() {
+	for _, buildParam := range generateBuildParams(regionMap) {
 		log.Infof(fmt.Sprintf("BuildParam: %v", buildParam))
 		newEnvs := writeBuildParamsToEnvs(&buildParam, &environments)
-		startedBuild, err := app.StartBuild(cfg.Workflows, build.OriginalBuildParams, cfg.BuildNumber, newEnvs)
+		startedBuild, err := app.StartBuild(cfg.DebugWorkflow, build.OriginalBuildParams, cfg.BuildNumber, newEnvs)
 		if err != nil {
 			failf("Failed to start build, error: %s", err)
 		}
 		buildSlugs = append(buildSlugs, startedBuild.BuildSlug)
 		log.Printf("- %s started (https://app.bitrise.io/build/%s)", startedBuild.TriggeredWorkflow, startedBuild.BuildSlug)
 	}
-	//for _, wf := range strings.Split(strings.TrimSpace(cfg.Workflows), "\n") {
-	//	wf = strings.TrimSpace(wf)
-	//	startedBuild, err := app.StartBuild(wf, build.OriginalBuildParams, cfg.BuildNumber, environments)
-	//	if err != nil {
-	//		failf("Failed to start build, error: %s", err)
-	//	}
-	//	buildSlugs = append(buildSlugs, startedBuild.BuildSlug)
-	//	log.Printf("- %s started (https://app.bitrise.io/build/%s)", startedBuild.TriggeredWorkflow, startedBuild.BuildSlug)
-	//}
 
 	if err := tools.ExportEnvironmentWithEnvman(envBuildSlugs, strings.Join(buildSlugs, "\n")); err != nil {
 		failf("Failed to export environment variable, error: %s", err)
