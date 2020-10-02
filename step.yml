@@ -72,33 +72,6 @@ inputs:
         ENV_3```
       is_expand: false
       is_required: false
-  - wait_for_builds: "false"
-    opts:
-      title: Wait for builds
-      summary: Should the step wait for the builds to be finished?
-      description: Should the step wait for the builds to be finished?
-      is_required: false
-      value_options:
-        - "false"
-        - "true"
-  - build_artifacts_save_path:
-    opts:
-      title: Path to save the Artifacts in (leave empty to not save artifacts)
-      summary: This is where the artifacts will be saved to if wait_for_builds == true
-      description: |
-        This is where the artifacts will be saved to so you can access them in the workflow
-      is_required: false
-      is_sensitive: false
-  - abort_on_fail: "no"
-    opts:
-      title: Abort all if any fail
-      description: |-
-        Abort all started builds if any build fails
-      is_required: true
-      is_sensitive: false
-      value_options:
-        - "yes"
-        - "no"
   - verbose: "no"
     opts:
       title: Enable verbose log?
@@ -112,5 +85,30 @@ outputs:
   - ROUTER_STARTED_BUILD_SLUGS:
     opts:
       title: "Started Build Slugs"
-      summary: "Newline separated list of started build slugs."
-      description: "Newline separated list of started build slugs."
+      summary: "Newline separated list of started build slugs. Can be empty if this is a child"
+      description: "Newline separated list of started build slugs. Can be empty if this is a child."
+  - GRADLE_BUILD:
+    opts:
+      title: "Gradle Build Command"
+      summary: "The Gradle build command generated"
+      description: "The Gradle build command generated."
+  - ALPHA_2_CODE:
+    opts:
+      title: "Alpha-2 Code"
+      summary: "The Alpha-2 Code generated e.g. `AU`"
+      description: "The Alpha-2 Code generated."
+  - SLACK_REGION:
+    opts:
+      title: "Slack Region"
+      summary: "Country name e.g. `Singapore`"
+      description: "Country name e.g. `Singapore`."
+  - GMS_XML:
+    opts:
+      title: "GMS XML file path"
+      summary: "Filepath of GMS xml used for uploading into Firebase"
+      description: "Filepath of GMS xml used for uploading into Firebase."
+  - PKG_NAME:
+    opts:
+      title: "Package Name"
+      summary: "Package ID of the build aab/apk"
+      description: "Package ID of the build aab/apk."

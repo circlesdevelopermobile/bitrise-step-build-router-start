@@ -16,19 +16,17 @@ const envBuildSlugs = "ROUTER_STARTED_BUILD_SLUGS"
 
 // Config ...
 type Config struct {
-	AppSlug                string          `env:"BITRISE_APP_SLUG,required"`
-	BuildSlug              string          `env:"BITRISE_BUILD_SLUG,required"`
-	BuildNumber            string          `env:"BITRISE_BUILD_NUMBER,required"`
-	AccessToken            stepconf.Secret `env:"access_token,required"`
-	RegionMap              string          `env:"region_mapping,required"`
-	WaitForBuilds          string          `env:"wait_for_builds"`
-	BuildArtifactsSavePath string          `env:"build_artifacts_save_path"`
-	AbortBuildsOnFail      string          `env:"abort_on_fail"`
-	DebugWorkflow          string          `env:"debug_workflow,required"`
-	QaWorkflow             string          `env:"qa_workflow,required"`
-	ReleaseWorkflow        string          `env:"release_workflow,required"`
-	Environments           string          `env:"environment_key_list"`
-	IsVerboseLog           bool            `env:"verbose,required"`
+	ParentBuild     string          `env:"SOURCE_BITRISE_BUILD_NUMBER"`
+	AppSlug         string          `env:"BITRISE_APP_SLUG,required"`
+	BuildSlug       string          `env:"BITRISE_BUILD_SLUG,required"`
+	BuildNumber     string          `env:"BITRISE_BUILD_NUMBER,required"`
+	AccessToken     stepconf.Secret `env:"access_token,required"`
+	RegionMap       string          `env:"region_mapping,required"`
+	DebugWorkflow   string          `env:"debug_workflow,required"`
+	QaWorkflow      string          `env:"qa_workflow,required"`
+	ReleaseWorkflow string          `env:"release_workflow,required"`
+	Environments    string          `env:"environment_key_list"`
+	IsVerboseLog    bool            `env:"verbose,required"`
 }
 
 func failf(s string, a ...interface{}) {
@@ -44,6 +42,13 @@ func main() {
 
 	stepconf.Print(cfg)
 	fmt.Println()
+
+	if cfg.ParentBuild == "" {
+		log.Infof("I am the master. I will fork more if necessary")
+	} else {
+		log.Infof("Bypassing script, child build of %s", cfg.ParentBuild)
+		return
+	}
 
 	log.SetEnableDebugLog(cfg.IsVerboseLog)
 
@@ -66,80 +71,25 @@ func main() {
 
 	var buildSlugs []string
 	environments := createEnvs(cfg.Environments)
-	for _, buildParam := range generateBuildParams(regionMap) {
+
+	for i, buildParam := range generateBuildParams(regionMap) {
 		log.Infof(fmt.Sprintf("BuildParam: %v", buildParam))
-		newEnvs := writeBuildParamsToEnvs(&buildParam, &environments)
-		startedBuild, err := app.StartBuild(cfg.DebugWorkflow, build.OriginalBuildParams, cfg.BuildNumber, newEnvs)
-		if err != nil {
-			failf("Failed to start build, error: %s", err)
+		if i == 0 {
+			writeBuildParamsToEnvs(&buildParam, nil) // write to envman directly!
+		} else {
+			newEnvs := writeBuildParamsToEnvs(&buildParam, &environments)
+			startedBuild, err := app.StartBuild(cfg.DebugWorkflow, build.OriginalBuildParams, cfg.BuildNumber, newEnvs)
+			if err != nil {
+				failf("Failed to start build, error: %s", err)
+			}
+			buildSlugs = append(buildSlugs, startedBuild.BuildSlug)
+			log.Printf("- %s started (https://app.bitrise.io/build/%s)", startedBuild.TriggeredWorkflow, startedBuild.BuildSlug)
 		}
-		buildSlugs = append(buildSlugs, startedBuild.BuildSlug)
-		log.Printf("- %s started (https://app.bitrise.io/build/%s)", startedBuild.TriggeredWorkflow, startedBuild.BuildSlug)
 	}
 
+	// Export the forked buildslug
 	if err := tools.ExportEnvironmentWithEnvman(envBuildSlugs, strings.Join(buildSlugs, "\n")); err != nil {
 		failf("Failed to export environment variable, error: %s", err)
-	}
-
-	if cfg.WaitForBuilds != "true" {
-		return
-	}
-
-	fmt.Println()
-	log.Infof("Waiting for builds:")
-
-	if err := app.WaitForBuilds(buildSlugs, func(build bitrise.Build) {
-		var failReason string
-		switch build.Status {
-		case 0:
-			log.Printf("- %s %s", build.TriggeredWorkflow, build.StatusText)
-		case 1:
-			log.Donef("- %s successful", build.TriggeredWorkflow)
-		case 2:
-			log.Errorf("- %s failed", build.TriggeredWorkflow)
-			failReason = "failed"
-		case 3:
-			log.Warnf("- %s aborted", build.TriggeredWorkflow)
-			failReason = "aborted"
-		case 4:
-			log.Infof("- %s cancelled", build.TriggeredWorkflow)
-			failReason = "cancelled"
-		}
-
-		if cfg.AbortBuildsOnFail == "yes" && build.Status > 1 {
-			for _, buildSlug := range buildSlugs {
-				if buildSlug != build.Slug {
-					abortErr := app.AbortBuild(buildSlug, "Abort on Fail - Build [https://app.bitrise.io/build/"+build.Slug+"] "+failReason+"\nAuto aborted by parent build")
-					if abortErr != nil {
-						log.Warnf("failed to abort build, error: %s", abortErr)
-					}
-					log.Donef("Build " + buildSlug + " aborted due to associated build failure")
-				}
-			}
-		}
-
-		if build.Status != 0 {
-			if strings.TrimSpace(cfg.BuildArtifactsSavePath) != "" {
-				artifactsResponse, err := build.GetBuildArtifacts(app)
-				if err != nil {
-					log.Warnf("failed to get build artifacts, error: %s", err)
-				}
-				for _, artifactSlug := range artifactsResponse.ArtifactSlugs {
-					artifactObj, err := build.GetBuildArtifact(app, artifactSlug.ArtifactSlug)
-					if err != nil {
-						log.Warnf("failed to get build artifact, error: %s", err)
-					}
-
-					downloadErr := artifactObj.Artifact.DownloadArtifact(strings.TrimSpace(cfg.BuildArtifactsSavePath) + artifactObj.Artifact.Title)
-					if downloadErr != nil {
-						log.Warnf("failed to download artifact, error: %s", downloadErr)
-					}
-					log.Donef("Downloaded: " + artifactObj.Artifact.Title + " to path " + strings.TrimSpace(cfg.BuildArtifactsSavePath))
-				}
-			}
-		}
-	}); err != nil {
-		failf("An error occoured: %s", err)
 	}
 }
 
@@ -164,17 +114,29 @@ func createEnvs(environmentKeys string) []bitrise.Environment {
 
 func writeBuildParamsToEnvs(buildParams *BuildParams, src *[]bitrise.Environment) []bitrise.Environment {
 	var newEnvs []bitrise.Environment
-	copy(newEnvs, *src)
 	rType := reflect.TypeOf(*buildParams)
 	rValue := reflect.ValueOf(*buildParams)
-	for i := 0; i < rType.NumField(); i++ {
-		field := rType.Field(i)
-		fieldValue := rValue.Field(i)
-		env := bitrise.Environment{
-			MappedTo: field.Tag.Get("env"),
-			Value:    fmt.Sprintf("%v", fieldValue.Interface()),
+	if src == nil {
+		for i := 0; i < rType.NumField(); i++ {
+			field := rType.Field(i)
+			fieldValue := rValue.Field(i)
+			key := field.Tag.Get("env")
+			value := fmt.Sprintf("%v", fieldValue.Interface())
+			if err := tools.ExportEnvironmentWithEnvman(key, value); err != nil {
+				failf("Failed to export environment variable, error: %s", err)
+			}
 		}
-		newEnvs = append(newEnvs, env)
+	} else {
+		copy(newEnvs, *src)
+		for i := 0; i < rType.NumField(); i++ {
+			field := rType.Field(i)
+			fieldValue := rValue.Field(i)
+			env := bitrise.Environment{
+				MappedTo: field.Tag.Get("env"),
+				Value:    fmt.Sprintf("%v", fieldValue.Interface()),
+			}
+			newEnvs = append(newEnvs, env)
+		}
 	}
 	return newEnvs
 }
