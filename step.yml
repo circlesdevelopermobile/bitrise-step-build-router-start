@@ -112,3 +112,8 @@ outputs:
       title: "Package Name"
       summary: "Package ID of the build aab/apk"
       description: "Package ID of the build aab/apk."
+  - BUILD_TYPE:
+    opts:
+      title: "Build Type"
+      summary: "0 - dev, 1 - qa, 2 - release"
+      description: "0 - dev, 1 - qa, 2 - release."

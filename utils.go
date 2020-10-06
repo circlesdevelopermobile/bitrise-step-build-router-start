@@ -39,7 +39,7 @@ type BuildParams struct {
 	PackageName        string    `env:"PKG_NAME" json:"pkg"`        // Prod
 	BrowserstackSuffix string    `env:"BS_SUFFIX" json:"bs_suffix"` // Browserstack
 	NewTag             string    `env:"-" json:"new_tag"`           // Internal
-	TgtBuildType       BuildType `env:"-" json:"build_type"`        // Internal
+	TgtBuildType       BuildType `env:"BUILD_TYPE" json:"build_type"`        // Internal
 }
 
 const NONE = "none"
