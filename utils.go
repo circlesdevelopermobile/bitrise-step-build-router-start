@@ -95,11 +95,47 @@ func generatePackageName(region string, a2code string, buildType *BuildType) str
 	return basePkg
 }
 
-func generateNewTag(version string, a2 string, rc string, buildType BuildType) string {
-	newTag := ""
+func joinIgnoreEmpty(items []string, sep string) string {
+	var ret strings.Builder
+	for _, item := range items {
+		if item != "" {
+			if ret.Len() > 0 {
+				ret.WriteString(sep)
+			}
+			ret.WriteString(item)
+		}
+	}
+	return ret.String()
+}
+
+func removeKeywords(lut []string, original string, sep string) string {
+	var newTagBuilder strings.Builder
+	for _, token := range strings.Split(original, sep) {
+		exists := false
+		for _, l := range lut {
+			if strings.ToLower(token) == strings.ToLower(l) {
+				exists = true
+				break
+			}
+		}
+		if exists {
+			continue
+		} else {
+			if newTagBuilder.Len() != 0 {
+				newTagBuilder.WriteString("-")
+			}
+			newTagBuilder.WriteString(token)
+		}
+	}
+	return newTagBuilder.String()
+}
+
+func generateNewTag(currentTag string, version string, a2 string, rc string, buildType BuildType) string {
+	lut := []string{currentTag, version, a2, rc, "ALL"}
+	newTag := removeKeywords(lut, currentTag, "-")
 	switch buildType {
 	case Qa:
-		newTag = fmt.Sprintf("%s-%s-%s", version, a2, rc)
+		newTag = joinIgnoreEmpty([]string{version, newTag, a2, rc}, "-")
 		break
 	case Release:
 		newTag = fmt.Sprintf("%s-%s", version, a2)
@@ -126,22 +162,29 @@ func generateBuildParams(regionMap map[string]string) []BuildParams {
 		os.Exit(1)
 	}
 
+	keys := make([]string, len(regionMap))
+	i := 0
+	for key := range regionMap {
+		keys[i] = key
+		i++
+	}
+
 	versionExp := regexp.MustCompile(`\d+\.\d+\.\d+`)
-	rcExp := regexp.MustCompile(`(?i)RC\d+`)
-	regionExp := regexp.MustCompile(`(?i)au|tw|sg|id`)
-	vendorSvcExp := regexp.MustCompile(`(?i)(?:g|h)ms`)
+	rcExp := regexp.MustCompile(`RC\d+`)
+	regionExp := regexp.MustCompile(strings.Join(keys, "|"))
+	vendorSvcExp := regexp.MustCompile(`(G|H)MS`)
 
 	version := findStringOrDefault(versionExp, token, NONE)
 	rc := findStringOrDefault(rcExp, token, NONE)
 	regionA2 := findStringOrDefault(regionExp, token, NONE)
-	vendorSvc := strings.ToLower(findStringOrDefault(vendorSvcExp, token, NONE))
+	vendorSvc := findStringOrDefault(vendorSvcExp, token, NONE)
 
 	envLogFmt := "Environment information:\nversion=\"%s\"\nrc=\"%s\"\nregionA2=\"%s\"\nvendorSvc=\"%s\""
-	// println(fmt.Sprintf(envLogFmt, version, rc, regionA2, vendorSvc))
+	//println(fmt.Sprintf(envLogFmt, version, rc, regionA2, vendorSvc))
 	log.Infof(fmt.Sprintf(envLogFmt, version, rc, regionA2, vendorSvc))
 
 	if vendorSvc == NONE {
-		vendorSvc = "gms"
+		vendorSvc = "GMS"
 	}
 
 	if version != NONE && rc == NONE {
@@ -149,7 +192,7 @@ func generateBuildParams(regionMap map[string]string) []BuildParams {
 	}
 
 	buildCmd := "assemble"
-	if buildType == Release && vendorSvc == "gms" {
+	if buildType == Release && vendorSvc == "GMS" {
 		buildCmd = "bundle"
 	}
 
@@ -163,7 +206,7 @@ func generateBuildParams(regionMap map[string]string) []BuildParams {
 		buildRegions = append(buildRegions, "singapore")
 	} else {
 		for a2, region := range regionMap {
-			newTagMapping[region] = generateNewTag(version, a2, rc, buildType)
+			newTagMapping[region] = generateNewTag(token, version, a2, rc, buildType)
 			buildRegions = append(buildRegions, region)
 		}
 	}
@@ -180,7 +223,7 @@ func generateBuildParams(regionMap map[string]string) []BuildParams {
 		}
 
 		buildParam := BuildParams{
-			GradleBuildTask:    snakify(buildCmd, buildRegion, vendorSvc, buildType.Name()),
+			GradleBuildTask:    snakify(buildCmd, buildRegion, strings.ToLower(vendorSvc), buildType.Name()),
 			Alpha2Code:         a2Code,
 			SlackFlag:          fmt.Sprintf(":flag-%s:", strings.ToLower(a2Code)),
 			BuildRegion:        strings.Title(buildRegion),
