@@ -79,7 +79,10 @@ func main() {
 			writeBuildParamsToEnvs(&buildParam, nil) // write to envman directly!
 			// rewrite tag if necessary
 			if buildParam.NewTag != "" {
-				_ = os.Setenv("BITRISE_GIT_TAG", buildParam.NewTag)
+				log.Infof(fmt.Sprintf("Overwriting TAG: %s", buildParam.NewTag))
+				if err := tools.ExportEnvironmentWithEnvman("BITRISE_GIT_TAG", buildParam.NewTag); err != nil {
+					failf("Unabloe to overwrite BITRISE_GIT_TAG")
+				}
 			}
 		} else {
 			newEnvs := writeBuildParamsToEnvs(&buildParam, &environments)
