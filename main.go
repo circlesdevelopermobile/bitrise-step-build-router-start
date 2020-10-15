@@ -23,10 +23,6 @@ type Config struct {
 	BuildNumber     string          `env:"BITRISE_BUILD_NUMBER,required"`
 	AccessToken     stepconf.Secret `env:"access_token,required"`
 	RegionMap       string          `env:"region_mapping,required"`
-	DebugWorkflow   string          `env:"debug_workflow,required"`
-	QaWorkflow      string          `env:"qa_workflow,required"`
-	ReleaseWorkflow string          `env:"release_workflow,required"`
-	Environments    string          `env:"environment_key_list"`
 	IsVerboseLog    bool            `env:"verbose,required"`
 }
 
@@ -71,7 +67,7 @@ func main() {
 	}
 
 	var buildSlugs []string
-	environments := createEnvs(cfg.Environments)
+	var environments []bitrise.Environment
 
 	for i, buildParam := range generateBuildParams(regionMap) {
 		log.Infof(fmt.Sprintf("BuildParam: %v", buildParam))
@@ -86,8 +82,10 @@ func main() {
 			}
 		} else {
 			newEnvs := writeBuildParamsToEnvs(&buildParam, &environments)
+			// always fork the triggered workflow
+			workflow := os.Getenv("BITRISE_TRIGGERED_WORKFLOW_ID")
 			startedBuild, err := app.StartBuild(
-				getCorrectWorkflow(cfg, buildParam.TgtBuildType),
+				workflow,
 				tryInjectNewTagToParams(build.OriginalBuildParams, buildParam.NewTag, build.BuildNumber),
 				cfg.BuildNumber,
 				newEnvs,
@@ -104,25 +102,6 @@ func main() {
 	if err := tools.ExportEnvironmentWithEnvman(envBuildSlugs, strings.Join(buildSlugs, "\n")); err != nil {
 		failf("Failed to export environment variable, error: %s", err)
 	}
-}
-
-func createEnvs(environmentKeys string) []bitrise.Environment {
-	environmentKeys = strings.Replace(environmentKeys, "$", "", -1)
-	environmentsKeyList := strings.Split(environmentKeys, "\n")
-
-	var environments []bitrise.Environment
-	for _, key := range environmentsKeyList {
-		if key == "" {
-			continue
-		}
-
-		env := bitrise.Environment{
-			MappedTo: key,
-			Value:    os.Getenv(key),
-		}
-		environments = append(environments, env)
-	}
-	return environments
 }
 
 func writeBuildParamsToEnvs(buildParams *BuildParams, src *[]bitrise.Environment) []bitrise.Environment {
@@ -154,17 +133,6 @@ func writeBuildParamsToEnvs(buildParams *BuildParams, src *[]bitrise.Environment
 		}
 	}
 	return newEnvs
-}
-
-func getCorrectWorkflow(cfg Config, buildType BuildType) string {
-	switch buildType {
-	case Release:
-		return cfg.ReleaseWorkflow
-	case Qa:
-		return cfg.QaWorkflow
-	default:
-		return cfg.DebugWorkflow
-	}
 }
 
 func tryInjectNewTagToParams(original json.RawMessage, tag string, buildNo int64) json.RawMessage {

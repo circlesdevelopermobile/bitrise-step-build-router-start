@@ -40,38 +40,6 @@ inputs:
         AU=Australia
         ID=Indonesia```
       is_required: true
-  - debug_workflow:
-    opts:
-      title: Debug workflow
-      summary: The workflow used to assemble debug builds
-      description: The workflow used to assemble debug builds.
-      is_required: true
-  - qa_workflow:
-    opts:
-      title: QA workflow
-      summary: The workflow used to assemble qa builds
-      description: The workflow used to assemble qa builds.
-      is_required: true
-  - release_workflow:
-    opts:
-      title: Release workflow (GMS)
-      summary: The workflow used to assemble release builds
-      description: The workflow used to assemble release builds.
-      is_required: true
-  - environment_key_list:
-    opts:
-      title: Environments to share
-      summary: The keys of the envs which will be shared with the triggered workflows.
-      description: |-
-        The keys of the envs which will be shared with the triggered workflows
-
-
-        **FORMAT** Seperate the keys with new line. E.g: 
-        ```ENV_1
-        ENV_2
-        ENV_3```
-      is_expand: false
-      is_required: false
   - verbose: "no"
     opts:
       title: Enable verbose log?
