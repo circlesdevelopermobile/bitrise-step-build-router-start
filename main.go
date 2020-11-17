@@ -75,9 +75,15 @@ func main() {
 			writeBuildParamsToEnvs(&buildParam, nil) // write to envman directly!
 			// rewrite tag if necessary
 			if buildParam.NewTag != "" {
-				log.Infof(fmt.Sprintf("Overwriting TAG: %s", buildParam.NewTag))
+				oldTag := os.Getenv("BITRISE_GIT_TAG")
+				log.Infof(fmt.Sprintf("Overriding TAG: %s -> %s", oldTag, buildParam.NewTag))
 				if err := tools.ExportEnvironmentWithEnvman("BITRISE_GIT_TAG", buildParam.NewTag); err != nil {
-					failf("Unabloe to overwrite BITRISE_GIT_TAG")
+					failf("Unable to overwrite BITRISE_GIT_TAG")
+				}
+			}
+			if buildParam.NewCommitHash != "" {
+				if err := tools.ExportEnvironmentWithEnvman("BITRISE_GIT_COMMIT", buildParam.NewCommitHash); err != nil {
+					failf("Unable to overwrite BITRISE_GIT_COMMIT")
 				}
 			}
 		} else {
@@ -86,7 +92,7 @@ func main() {
 			workflow := os.Getenv("BITRISE_TRIGGERED_WORKFLOW_ID")
 			startedBuild, err := app.StartBuild(
 				workflow,
-				tryInjectNewTagToParams(build.OriginalBuildParams, buildParam.NewTag, build.BuildNumber),
+				tryInjectNewParamsToBuild(build, buildParam),
 				cfg.BuildNumber,
 				newEnvs,
 			)
@@ -135,15 +141,18 @@ func writeBuildParamsToEnvs(buildParams *BuildParams, src *[]bitrise.Environment
 	return newEnvs
 }
 
-func tryInjectNewTagToParams(original json.RawMessage, tag string, buildNo int64) json.RawMessage {
+func tryInjectNewParamsToBuild(build bitrise.Build, newParams BuildParams) json.RawMessage {
 	var params map[string]interface{}
-	if err := json.Unmarshal(original, &params); err != nil {
+	if err := json.Unmarshal(build.OriginalBuildParams, &params); err != nil {
 		failf("Forbidden technique doesn't work!")
 	}
-	if tag != "" {
+	if tag := newParams.NewTag; tag != "" {
 		params["tag"] = tag
 	}
-	params["triggered_by"] = fmt.Sprintf("Build #%d", buildNo)
+	if newCommitHash := newParams.NewCommitHash; newCommitHash != "" {
+		params["commit_hash"] = newCommitHash
+	}
+	params["triggered_by"] = fmt.Sprintf("Build #%d", build.BuildNumber)
 	result, _ := json.Marshal(params)
 	return result
 }

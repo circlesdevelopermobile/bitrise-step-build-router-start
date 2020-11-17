@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/bitrise-io/go-utils/log"
 	"os"
+	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
@@ -32,14 +34,15 @@ func (bt BuildType) Name() string {
 
 type BuildParams struct {
 	GradleBuildTask    string    `env:"GRADLE_BUILD" json:"build_task"`
-	Alpha2Code         string    `env:"ALPHA_2_CODE" json:"-"`      // Slack, Browserstack
-	SlackFlag          string    `env:"SLACK_FLAG" json:"-"`        // Slack
-	BuildRegion        string    `env:"SLACK_REGION" json:"-"`      // Slack
-	GServicesXMLPath   string    `env:"GMS_XML" json:"-"`           // QA
-	PackageName        string    `env:"PKG_NAME" json:"pkg"`        // Prod
-	BrowserstackSuffix string    `env:"BS_SUFFIX" json:"bs_suffix"` // Browserstack
-	NewTag             string    `env:"-" json:"new_tag"`           // Internal
-	TgtBuildType       BuildType `env:"BUILD_TYPE" json:"build_type"`        // Internal
+	Alpha2Code         string    `env:"ALPHA_2_CODE" json:"-"`        // Slack, Browserstack
+	SlackFlag          string    `env:"SLACK_FLAG" json:"-"`          // Slack
+	BuildRegion        string    `env:"SLACK_REGION" json:"-"`        // Slack
+	GServicesXMLPath   string    `env:"GMS_XML" json:"-"`             // QA
+	PackageName        string    `env:"PKG_NAME" json:"pkg"`          // Prod
+	BrowserstackSuffix string    `env:"BS_SUFFIX" json:"bs_suffix"`   // Browserstack
+	NewTag             string    `env:"-" json:"new_tag"`             // Internal
+	NewCommitHash      string    `env:"-" json:"new_commit_hash"`     // Internal
+	TgtBuildType       BuildType `env:"BUILD_TYPE" json:"build_type"` // Internal
 }
 
 const NONE = "none"
@@ -231,6 +234,7 @@ func generateBuildParams(regionMap map[string]string) []BuildParams {
 			PackageName:        generatePackageName(buildRegion, a2Code, &buildType),
 			BrowserstackSuffix: bsSuffix,
 			NewTag:             newTagMapping[buildRegion],
+			NewCommitHash:      revParseTag(os.Getenv("BITRISE_GIT_TAG")),
 			TgtBuildType:       buildType,
 		}
 
@@ -238,4 +242,19 @@ func generateBuildParams(regionMap map[string]string) []BuildParams {
 	}
 
 	return buildParams
+}
+
+func revParseTag(tag string) string {
+	if _, defined := os.LookupEnv("BITRISE_GIT_COMMIT"); defined {
+		return ""
+	}
+	cmd := exec.Command("git", "rev-parse", tag)
+	cmd.Dir = os.Getenv("BITRISE_SOURCE_DIR")
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	err := cmd.Run()
+	if err != nil {
+		return ""
+	}
+	return out.String()
 }
