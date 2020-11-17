@@ -254,7 +254,7 @@ func revParseTag(tag string) string {
 	cmd.Stdout = &out
 	err := cmd.Run()
 	if err != nil {
-		return ""
+		failf("Unable to rev-parse tag %s", tag)
 	}
 	return out.String()
 }
