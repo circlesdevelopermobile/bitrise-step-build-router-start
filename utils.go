@@ -134,7 +134,7 @@ func removeKeywords(lut []string, original string, sep string) string {
 }
 
 func generateNewTag(currentTag string, version string, a2 string, rc string, buildType BuildType) string {
-	lut := []string{currentTag, version, a2, rc, "ALL"}
+	lut := []string{currentTag, version, a2, rc, "ALL", "APK"}
 	newTag := removeKeywords(lut, currentTag, "-")
 	switch buildType {
 	case Qa:
@@ -181,6 +181,7 @@ func generateBuildParams(regionMap map[string]string) []BuildParams {
 	rc := findStringOrDefault(rcExp, token, NONE)
 	regionA2 := findStringOrDefault(regionExp, token, NONE)
 	vendorSvc := findStringOrDefault(vendorSvcExp, token, NONE)
+	isApk := strings.Contains(token, "-APK")
 
 	envLogFmt := "Environment information:\nversion=\"%s\"\nrc=\"%s\"\nregionA2=\"%s\"\nvendorSvc=\"%s\""
 	//println(fmt.Sprintf(envLogFmt, version, rc, regionA2, vendorSvc))
@@ -195,7 +196,7 @@ func generateBuildParams(regionMap map[string]string) []BuildParams {
 	}
 
 	buildCmd := "assemble"
-	if buildType == Release && vendorSvc == "GMS" {
+	if !isApk && buildType == Release && vendorSvc == "GMS" {
 		buildCmd = "bundle"
 	}
 
