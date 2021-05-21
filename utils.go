@@ -147,7 +147,7 @@ func generateNewTag(currentTag string, version string, a2 string, rc string, bui
 	return newTag
 }
 
-func generateBuildParams(regionMap map[string]string) []BuildParams {
+func generateBuildParams(supportedRegions map[string]string, allTagExcludes map[string]bool) []BuildParams {
 	var token string
 
 	buildType := Debug
@@ -165,16 +165,16 @@ func generateBuildParams(regionMap map[string]string) []BuildParams {
 		os.Exit(1)
 	}
 
-	keys := make([]string, len(regionMap))
+	a2codes := make([]string, len(supportedRegions))
 	i := 0
-	for key := range regionMap {
-		keys[i] = key
+	for key := range supportedRegions {
+		a2codes[i] = key
 		i++
 	}
 
 	versionExp := regexp.MustCompile(`\d+\.\d+\.\d+`)
 	rcExp := regexp.MustCompile(`RC\d+`)
-	regionExp := regexp.MustCompile(strings.Join(keys, "|"))
+	regionExp := regexp.MustCompile(strings.Join(a2codes, "|"))
 	vendorSvcExp := regexp.MustCompile(`(G|H)MS`)
 
 	version := findStringOrDefault(versionExp, token, NONE)
@@ -202,21 +202,26 @@ func generateBuildParams(regionMap map[string]string) []BuildParams {
 
 	var buildRegions []string
 	var newTagMapping = make(map[string]string)
-	mapping, exists := regionMap[strings.ToUpper(regionA2)]
+	mapping, exists := supportedRegions[strings.ToUpper(regionA2)]
 	if exists {
+		// single build
 		buildRegions = append(buildRegions, mapping)
 	} else if toBool("PR") {
 		// fallback to SG builds on PRs
 		buildRegions = append(buildRegions, "singapore")
 	} else {
-		for a2, region := range regionMap {
-			newTagMapping[region] = generateNewTag(token, version, a2, rc, buildType)
-			buildRegions = append(buildRegions, region)
+		// "ALL" build, iterate supported regions
+		for a2, region := range supportedRegions {
+			// remember to exclude it tho
+			if !allTagExcludes[a2] {
+				newTagMapping[region] = generateNewTag(token, version, a2, rc, buildType)
+				buildRegions = append(buildRegions, region)
+			}
 		}
 	}
 
 	var buildParams []BuildParams
-	var regionToA2 = reverseMap(&regionMap)
+	var regionToA2 = reverseMap(&supportedRegions)
 	for _, buildRegion := range buildRegions {
 		flavor := snakify(buildRegion, "gms")
 		a2Code := regionToA2[buildRegion]
