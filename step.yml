@@ -47,7 +47,7 @@ inputs:
       is_required: true
   - all_tag_excludes:
     opts:
-      title: Region Mapping
+      title: Exclude Region
       summary: A list of Alpha-2 Codes to exclude from the `ALL` tag
       description: |
         A list of Alpha-2 Codes to Country that this script will exclude from the `ALL` tag.
@@ -55,6 +55,16 @@ inputs:
         **Example** Seperate the keys with new line. E.g:
         ```JP
         XD```
+  - supported_regions_alias:
+    opts:
+      title: Region Alias
+      summary: A mapping of Aliases to Alpha-2 Codes that this script will support
+      description: |
+        A mapping of Aliases to Alpha-2 Codes that this script will support.
+
+        **Example** Seperate the keys with new line. E.g:
+        ```B2BCL=XX
+        ```
   - verbose: "no"
     opts:
       title: Enable verbose log?

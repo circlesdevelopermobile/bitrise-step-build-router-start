@@ -17,15 +17,16 @@ const envBuildSlugs = "ROUTER_STARTED_BUILD_SLUGS"
 
 // Config ...
 type Config struct {
-	ParentBuild      string          `env:"SOURCE_BITRISE_BUILD_NUMBER"`
-	AppSlug          string          `env:"BITRISE_APP_SLUG,required"`
-	BuildSlug        string          `env:"BITRISE_BUILD_SLUG,required"`
-	BuildNumber      string          `env:"BITRISE_BUILD_NUMBER,required"`
-	AccessToken      stepconf.Secret `env:"access_token,required"`
-	DefaultRegion    string          `env:"default_region,required"`
-	SupportedRegions string          `env:"supported_regions,required"`
-	AllTagExcludes   string          `env:"all_tag_excludes"`
-	IsVerboseLog     bool            `env:"verbose,required"`
+	ParentBuild           string          `env:"SOURCE_BITRISE_BUILD_NUMBER"`
+	AppSlug               string          `env:"BITRISE_APP_SLUG,required"`
+	BuildSlug             string          `env:"BITRISE_BUILD_SLUG,required"`
+	BuildNumber           string          `env:"BITRISE_BUILD_NUMBER,required"`
+	AccessToken           stepconf.Secret `env:"access_token,required"`
+	DefaultRegion         string          `env:"default_region,required"`
+	SupportedRegions      string          `env:"supported_regions,required"`
+	SupportedRegionsAlias string          `env:"supported_regions_alias"`
+	AllTagExcludes        string          `env:"all_tag_excludes"`
+	IsVerboseLog          bool            `env:"verbose,required"`
 }
 
 func failf(s string, a ...interface{}) {
@@ -76,10 +77,18 @@ func main() {
 		}
 	}
 
+	supportedRegionAlias := make(map[string]string)
+	for _, line := range strings.Split(cfg.SupportedRegionsAlias, "\n") {
+		pair := strings.Split(line, "=")
+		key := pair[0]
+		value := pair[1]
+		supportedRegionAlias[key] = value
+	}
+
 	var buildSlugs []string
 	var environments []bitrise.Environment
 
-	for i, buildParam := range generateBuildParams(supportedRegions, allTagExcludes, cfg.DefaultRegion) {
+	for i, buildParam := range generateBuildParams(supportedRegions, allTagExcludes, supportedRegionAlias, cfg.DefaultRegion) {
 		log.Infof(fmt.Sprintf("BuildParam: %v", buildParam))
 		if i == 0 {
 			writeBuildParamsToEnvs(&buildParam, nil) // write to envman directly!
