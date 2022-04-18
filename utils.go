@@ -174,7 +174,7 @@ func generateBuildParams(supportedRegions map[string]string, allTagExcludes map[
 
 	versionExp := regexp.MustCompile(`\d+\.\d+\.\d+`)
 	rcExp := regexp.MustCompile(`RC\d+`)
-	regionExp := regexp.MustCompile(strings.Join(a2codes, "|"))
+	regionExp := regexp.MustCompile(`(?i)` + strings.Join(a2codes, "|"))
 	vendorSvcExp := regexp.MustCompile(`(G|H)MS`)
 
 	version := findStringOrDefault(versionExp, token, NONE)
