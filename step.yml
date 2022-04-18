@@ -28,6 +28,11 @@ inputs:
       is_required: true
       is_expand: true
       is_sensitive: true
+  - default_region:
+    opts:
+      title: Default Region
+      summary: Default region to fallback to in the case Alpha-2 Codes cannot be found
+      is_required: true
   - supported_regions:
     opts:
       title: Region Mapping
