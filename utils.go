@@ -147,7 +147,7 @@ func generateNewTag(currentTag string, version string, a2 string, rc string, bui
 	return newTag
 }
 
-func generateBuildParams(supportedRegions map[string]string, allTagExcludes map[string]bool) []BuildParams {
+func generateBuildParams(supportedRegions map[string]string, allTagExcludes map[string]bool, defaultRegion string) []BuildParams {
 	var token string
 
 	buildType := Debug
@@ -208,7 +208,7 @@ func generateBuildParams(supportedRegions map[string]string, allTagExcludes map[
 		buildRegions = append(buildRegions, mapping)
 	} else if toBool("PR") {
 		// fallback to SG builds on PRs
-		buildRegions = append(buildRegions, "singapore")
+		buildRegions = append(buildRegions, supportedRegions[defaultRegion])
 	} else {
 		// "ALL" build, iterate supported regions
 		for a2, region := range supportedRegions {

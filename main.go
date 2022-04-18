@@ -22,6 +22,7 @@ type Config struct {
 	BuildSlug        string          `env:"BITRISE_BUILD_SLUG,required"`
 	BuildNumber      string          `env:"BITRISE_BUILD_NUMBER,required"`
 	AccessToken      stepconf.Secret `env:"access_token,required"`
+	DefaultRegion    string          `env:"default_region,required"`
 	SupportedRegions string          `env:"supported_regions,required"`
 	AllTagExcludes   string          `env:"all_tag_excludes"`
 	IsVerboseLog     bool            `env:"verbose,required"`
@@ -78,7 +79,7 @@ func main() {
 	var buildSlugs []string
 	var environments []bitrise.Environment
 
-	for i, buildParam := range generateBuildParams(supportedRegions, allTagExcludes) {
+	for i, buildParam := range generateBuildParams(supportedRegions, allTagExcludes, cfg.DefaultRegion) {
 		log.Infof(fmt.Sprintf("BuildParam: %v", buildParam))
 		if i == 0 {
 			writeBuildParamsToEnvs(&buildParam, nil) // write to envman directly!
