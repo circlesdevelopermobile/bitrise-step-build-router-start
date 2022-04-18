@@ -147,7 +147,7 @@ func generateNewTag(currentTag string, version string, a2 string, rc string, bui
 	return newTag
 }
 
-func generateBuildParams(supportedRegions map[string]string, allTagExcludes map[string]bool, defaultRegion string) []BuildParams {
+func generateBuildParams(supportedRegions map[string]string, allTagExcludes map[string]bool, supportedRegionAlias map[string]string, defaultRegion string) []BuildParams {
 	var token string
 
 	buildType := Debug
@@ -226,6 +226,11 @@ func generateBuildParams(supportedRegions map[string]string, allTagExcludes map[
 		flavor := snakify(buildRegion, "gms")
 		a2Code := regionToA2[buildRegion]
 		bsSuffix := "QA"
+
+		a2codeAlias, aliasExists := supportedRegionAlias[a2Code]
+		if aliasExists {
+			a2Code = a2codeAlias
+		}
 
 		if buildType == Release {
 			bsSuffix = "PROD"
