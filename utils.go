@@ -239,7 +239,7 @@ func generateBuildParams(supportedRegions map[string]string, allTagExcludes map[
 
 		buildParam := BuildParams{
 			GradleBuildTask:    snakify(buildCmd, buildRegion, strings.ToLower(vendorSvc), buildType.Name()),
-			GradleTestTask:     snakify("test", buildRegion, string.ToLower(vendorSvc), buildType.Name(), "unit", "test"),
+			GradleTestTask:     snakify("test", buildRegion, strings.ToLower(vendorSvc), buildType.Name(), "unit", "test"),
 			Alpha2Code:         a2Code,
 			SlackFlag:          fmt.Sprintf(":flag-%s:", strings.ToLower(a2Code)),
 			BuildRegion:        strings.Title(buildRegion),
