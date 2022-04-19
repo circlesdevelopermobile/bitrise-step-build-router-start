@@ -85,6 +85,11 @@ outputs:
       title: "Gradle Build Command"
       summary: "The Gradle build command generated"
       description: "The Gradle build command generated."
+  - GRADLE_TEST:
+    opts:
+      title: "Gradle Test Command"
+      summary: "The Gradle test command generated"
+      description: "The Gradle test command generated."
   - ALPHA_2_CODE:
     opts:
       title: "Alpha-2 Code"
