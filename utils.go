@@ -34,6 +34,7 @@ func (bt BuildType) Name() string {
 
 type BuildParams struct {
 	GradleBuildTask    string    `env:"GRADLE_BUILD" json:"build_task"`
+	GradleTestTask     string    `env:"GRADLE_TEST" json:"test_task"`
 	Alpha2Code         string    `env:"ALPHA_2_CODE" json:"-"`        // Slack, Browserstack
 	SlackFlag          string    `env:"SLACK_FLAG" json:"-"`          // Slack
 	BuildRegion        string    `env:"SLACK_REGION" json:"-"`        // Slack
@@ -238,6 +239,7 @@ func generateBuildParams(supportedRegions map[string]string, allTagExcludes map[
 
 		buildParam := BuildParams{
 			GradleBuildTask:    snakify(buildCmd, buildRegion, strings.ToLower(vendorSvc), buildType.Name()),
+			GradleTestTask:     snakify("test", buildRegion, string.ToLower(vendorSvc), buildType.Name(), "unit", "test"),
 			Alpha2Code:         a2Code,
 			SlackFlag:          fmt.Sprintf(":flag-%s:", strings.ToLower(a2Code)),
 			BuildRegion:        strings.Title(buildRegion),
