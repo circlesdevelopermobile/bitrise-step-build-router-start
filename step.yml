@@ -44,6 +44,10 @@ inputs:
         ```SG=Singapore
         AU=Australia
         ID=Indonesia```
+        I.e. if your tag has AU, it will output build params:
+        $GRADLE_BUILD with the Australia name, i.e. bundleAustraliaGmsRelease
+        $GRADLE_TEST with the Australia name, i.e. testAustraliaGmsReleaseUnitTest
+        $SLACK_REGION as the mapped value, i.e. Australia
       is_required: true
   - all_tag_excludes:
     opts:
@@ -54,7 +58,7 @@ inputs:
 
         **Example** Seperate the keys with new line. E.g:
         ```JP
-        XD```
+        ```
   - supported_regions_alias:
     opts:
       title: Region Alias
@@ -64,7 +68,11 @@ inputs:
 
         **Example** Seperate the keys with new line. E.g:
         ```B2BCL=XX
+        AU=au
         ```
+        I.e. if your tag has AU, it will output build params:
+        $ALPHA_2_CODE as the mapped value, i.e. au (NOTE: this is used in our internal Prod-Build-AAB-2.0 workflow!)
+        $PKG_NAME will be generated with the alpha-2 code, i.e. com.example-app-name.au
   - verbose: "no"
     opts:
       title: Enable verbose log?

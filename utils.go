@@ -3,12 +3,13 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"github.com/bitrise-io/go-utils/log"
 	"os"
 	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/bitrise-io/go-utils/log"
 )
 
 type BuildType int
@@ -208,7 +209,7 @@ func generateBuildParams(supportedRegions map[string]string, allTagExcludes map[
 		// single build
 		buildRegions = append(buildRegions, mapping)
 	} else if toBool("PR") {
-		// fallback to SG builds on PRs
+		// fallback to default region builds on PRs
 		buildRegions = append(buildRegions, supportedRegions[defaultRegion])
 	} else {
 		// "ALL" build, iterate supported regions
