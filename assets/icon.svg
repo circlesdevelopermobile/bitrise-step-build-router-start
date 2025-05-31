@@ -1,5 +1,42 @@
-<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect width="256" height="256" fill="#D8D8D8"/>
-<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="20" fill="#888888">Placeholder Icon</text>
-<rect x="60" y="60" width="136" height="136" stroke="#888888" stroke-width="2" fill="none"/>
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background rounded rectangle -->
+  <rect x="10" y="10" width="180" height="180" rx="40" ry="40" fill="#B694D4"/>
+  
+  <!-- Android robot head -->
+  <path d="M50 60 L150 60 Q165 60 165 75 L165 110 Q165 125 150 125 L50 125 Q35 125 35 110 L35 75 Q35 60 50 60 Z" fill="#5D2E5D"/>
+  
+  <!-- Left antenna -->
+  <rect x="55" y="35" width="8" height="35" rx="4" ry="4" fill="#5D2E5D" transform="rotate(-25 59 52.5)"/>
+  
+  <!-- Right antenna -->
+  <rect x="137" y="35" width="8" height="35" rx="4" ry="4" fill="#5D2E5D" transform="rotate(25 141 52.5)"/>
+  
+  <!-- Left eye -->
+  <circle cx="70" cy="85" r="8" fill="#C8A8D8"/>
+  
+  <!-- Right eye -->
+  <circle cx="130" cy="85" r="8" fill="#C8A8D8"/>
+  
+  <!-- Smile -->
+  <path d="M80 105 Q100 115 120 105" stroke="#C8A8D8" stroke-width="6" fill="none" stroke-linecap="round"/>
+  
+  <!-- Body base -->
+  <rect x="60" y="125" width="80" height="15" fill="#5D2E5D"/>
+  
+  <!-- Left arm -->
+  <rect x="30" y="140" width="15" height="50" rx="7.5" ry="7.5" fill="#5D2E5D"/>
+  <rect x="30" y="155" width="30" height="15" rx="7.5" ry="7.5" fill="#C8A8D8"/>
+  
+  <!-- Right arm -->
+  <rect x="155" y="140" width="15" height="50" rx="7.5" ry="7.5" fill="#5D2E5D"/>
+  <rect x="140" y="155" width="30" height="15" rx="7.5" ry="7.5" fill="#C8A8D8"/>
+  
+  <!-- Body -->
+  <rect x="60" y="140" width="80" height="35" fill="#5D2E5D"/>
+  
+  <!-- Left leg -->
+  <rect x="75" y="175" width="15" height="15" rx="7.5" ry="7.5" fill="#C8A8D8"/>
+  
+  <!-- Right leg -->
+  <rect x="110" y="175" width="15" height="15" rx="7.5" ry="7.5" fill="#C8A8D8"/>
 </svg>
