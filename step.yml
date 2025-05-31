@@ -5,6 +5,8 @@ website: https://github.com/bitrise-steplib/bitrise-step-build-router-start
 source_code_url: https://github.com/bitrise-steplib/bitrise-step-build-router-start
 support_url: https://github.com/bitrise-steplib/bitrise-step-build-router-start/issues
 
+project_type_tags:
+  - android
 type_tags:
   - utility
 
@@ -82,6 +84,20 @@ inputs:
       value_options:
         - "yes"
         - "no"
+  - git_tag: $BITRISE_GIT_TAG
+    opts:
+      title: Git Tag
+      summary: The git tag that triggered the build.
+      description: The git tag that triggered the build. Defaults to $BITRISE_GIT_TAG.
+      is_required: false
+      is_expand: true
+  - triggered_workflow_id: $BITRISE_TRIGGERED_WORKFLOW_ID
+    opts:
+      title: Triggered Workflow ID
+      summary: The ID of the workflow that was originally triggered.
+      description: The ID of the workflow that was originally triggered. Defaults to $BITRISE_TRIGGERED_WORKFLOW_ID.
+      is_required: false
+      is_expand: true
 outputs:
   - ROUTER_STARTED_BUILD_SLUGS:
     opts:

@@ -26,6 +26,8 @@ type Config struct {
 	SupportedRegions      string          `env:"supported_regions,required"`
 	SupportedRegionsAlias string          `env:"supported_regions_alias"`
 	AllTagExcludes        string          `env:"all_tag_excludes"`
+	GitTag                string          `env:"git_tag"`
+	TriggeredWorkflowID   string          `env:"triggered_workflow_id"`
 	IsVerboseLog          bool            `env:"verbose,required"`
 }
 
@@ -94,7 +96,7 @@ func main() {
 			writeBuildParamsToEnvs(&buildParam, nil) // write to envman directly!
 			// rewrite tag if necessary
 			if buildParam.NewTag != "" {
-				oldTag := os.Getenv("BITRISE_GIT_TAG")
+				oldTag := cfg.GitTag
 				log.Infof(fmt.Sprintf("Overriding TAG: %s -> %s", oldTag, buildParam.NewTag))
 				if err := tools.ExportEnvironmentWithEnvman("BITRISE_GIT_TAG", buildParam.NewTag); err != nil {
 					failf("Unable to overwrite BITRISE_GIT_TAG")
@@ -108,7 +110,7 @@ func main() {
 		} else {
 			newEnvs := writeBuildParamsToEnvs(&buildParam, &environments)
 			// always fork the triggered workflow
-			workflow := os.Getenv("BITRISE_TRIGGERED_WORKFLOW_ID")
+			workflow := cfg.TriggeredWorkflowID
 			startedBuild, err := app.StartBuild(
 				workflow,
 				tryInjectNewParamsToBuild(build, buildParam),
