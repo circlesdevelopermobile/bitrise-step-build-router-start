@@ -48,7 +48,7 @@ type BuildParams struct {
 }
 
 const NONE = "none"
-const GSERVICES_XML_FILE_PATH = "accmng/build/generated/res/google-services/%s/%s/values/values.xml"
+const GSERVICES_XML_FILE_PATH = "accmng/build/generated/res/process%s%sGoogleServices/values/values.xml"
 
 // Check the link below if the build fails
 // https://developers.google.com/android/guides/google-services-plugin#processing_the_json_file
@@ -225,7 +225,7 @@ func generateBuildParams(supportedRegions map[string]string, allTagExcludes map[
 	var buildParams []BuildParams
 	var regionToA2 = reverseMap(&supportedRegions)
 	for _, buildRegion := range buildRegions {
-		flavor := snakify(buildRegion, "gms")
+		flavor := capitalize(buildRegion) + "Gms"
 		a2Code := regionToA2[buildRegion]
 		bsSuffix := "QA"
 
@@ -244,7 +244,7 @@ func generateBuildParams(supportedRegions map[string]string, allTagExcludes map[
 			Alpha2Code:         a2Code,
 			SlackFlag:          fmt.Sprintf(":flag-%s:", strings.ToLower(a2Code)),
 			BuildRegion:        strings.Title(buildRegion),
-			GServicesXMLPath:   fmt.Sprintf(GSERVICES_XML_FILE_PATH, flavor, buildType.Name()),
+			GServicesXMLPath:   fmt.Sprintf(GSERVICES_XML_FILE_PATH, flavor, capitalize(buildType.Name())),
 			PackageName:        generatePackageName(buildRegion, a2Code, &buildType),
 			BrowserstackSuffix: bsSuffix,
 			NewTag:             newTagMapping[buildRegion],
@@ -271,4 +271,11 @@ func revParseTag(tag string) string {
 		return ""
 	}
 	return out.String()
+}
+
+func capitalize(s string) string {
+	if s == "" {
+		return s
+	}
+	return strings.ToUpper(string(s[0])) + s[1:]
 }
